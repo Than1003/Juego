@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criminal Case: Escenas Interactivas // Caso #409</title>
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+
+  <!-- CONTENEDOR DE ALERTAS TOAST INVESTIGATIVAS -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ENCABEZADO CINEMATOGRÁFICO DEL CASO Y HUD PRINCIPAL -->
+  <header class="game-header">
+    <div class="case-badge">
+      <div class="badge-metal-shield">
+        <span class="badge-icon">🕵️</span>
+      </div>
+      <div>
+        <div id="level-badge" class="case-top-tag">NIVEL 1/5 // DESPACHO DEL DETECTIVE</div>
+        <h1 class="case-title-main">Criminal Case: Operación Sombra</h1>
+        <div id="level-difficulty" class="case-subtitle">Baker St. 42 // Piso 3 [NORMAL]</div>
+      </div>
+    </div>
+
+    <!-- HUD CENTRAL DE INVESTIGACIÓN -->
+    <div class="hud-stats-group">
+      <div class="hud-metric hud-metric-stars">
+        <span class="hud-label">REPUTACIÓN</span>
+        <span id="header-stars" class="stars-meter">★☆☆☆☆</span>
+      </div>
+
+      <div class="hud-metric">
+        <span class="hud-label">TIEMPO</span>
+        <span id="timer-display" class="hud-value hud-timer">01:10</span>
+      </div>
+
+      <div class="hud-metric">
+        <span class="hud-label">PUNTOS</span>
+        <span id="score-display" class="hud-value hud-score">0</span>
+      </div>
+
+      <div id="combo-display" class="combo-badge"></div>
+    </div>
+
+    <!-- BOTÓN DE PISTA, AUDIO Y CONTROLES -->
+    <div class="header-controls">
+      <button id="hint-btn" class="hint-button" title="Pedir una pista al forense">
+        <span class="hint-icon">🔍</span>
+        <div class="hint-body">
+          <span class="hint-title">PISTA</span>
+          <span id="hint-count" class="hint-counter">3/3</span>
+        </div>
+        <div class="hint-progress-track">
+          <div id="hint-progress-bar" class="hint-progress-fill" style="width: 100%;"></div>
+        </div>
+      </button>
+
+      <button id="toggle-sound-btn" class="btn-secondary" title="Activar/Silenciar efectos sonoros">🔊 Audio</button>
+      <div id="mouse-coords" class="hud-pill">X: --- | Y: ---</div>
+      <button id="toggle-debug-btn" class="btn-secondary" title="Ver zonas interactivas">🎯 Hitboxes</button>
+    </div>
+  </header>
+
+  <!-- ÁREA DE JUEGO / CANVAS VIRTUAL 1280x720 -->
+  <main class="game-viewport">
+    <canvas id="crime-canvas" width="1280" height="720"></canvas>
+
+    <!-- BARRA DE NAVEGACIÓN FLOTANTE DE ZOOM / SUB-ESCENA -->
+    <div id="zoom-nav-bar" class="zoom-nav-bar hidden">
+      <button id="zoom-back-btn" class="btn-primary btn-zoom-back">🔙 Volver a la Escena Principal</button>
+      <span id="zoom-title" class="zoom-title">INSPECCIONANDO CONTENEDOR</span>
+    </div>
+
+    <!-- OVERLAY DE INICIO (SIN REGISTRO NI LOGIN) -->
+    <div id="menu-overlay" class="menu-overlay">
+      <div class="dossier-card dossier-intro">
+        <div class="dossier-clip"></div>
+        <div class="dossier-stamp stamp-classified">INTERACTIVO</div>
+        <h2 class="menu-title">Operación Sombra</h2>
+        <p class="menu-description">
+          Las escenas contienen indicios ocultos en <strong>múltiples capas</strong>: abre cajones, cajas fuertes y contenedores, y mueve alfombras o libros para destapar lo que hay debajo.
+        </p>
+
+        <div class="instructions-box">
+          <strong>NUEVAS MECÁNICAS DE ESCENA:</strong>
+          <ul>
+            <li>• <strong>Contenedores y Sub-escenas:</strong> Haz clic sobre cajones, armarios o cajas para abrir un zoom a su interior y buscar dentro.</li>
+            <li>• <strong>Mover y Desplazar Objetos:</strong> Toca alfombras, libros o cubiertas para deslizarlas y destapar evidencias secretas.</li>
+            <li>• <strong>Navegación:</strong> Usa el botón "Volver" o la tecla <strong>ESC</strong> para salir de un contenedor.</li>
+            <li>• <strong>Penalización Anti-Spam:</strong> Clics fallidos descuentan <strong>-50 pts y -3s</strong>.</li>
+          </ul>
+        </div>
+
+        <button id="start-btn" class="btn-primary btn-gold-action">COMENZAR INVESTIGACIÓN (NIVEL 1)</button>
+      </div>
+    </div>
+
+    <!-- MODAL DE NIVEL COMPLETADO (TRANSICIÓN AL SIGUIENTE NIVEL) -->
+    <div id="level-complete-modal" class="menu-overlay modal-result hidden">
+      <div class="dossier-card card-victory">
+        <div class="dossier-clip"></div>
+        <div id="level-complete-tag" class="result-badge badge-success">NIVEL 1 COMPLETADO</div>
+        <h2 id="level-complete-name" class="menu-title victory-title">Escena Asegurada</h2>
+        <div class="case-verdict">Todas las evidencias han sido recolectadas con éxito.</div>
+        
+        <div id="level-complete-stars" class="stars-display">★★★★★</div>
+
+        <div class="stats-summary-grid">
+          <div class="stat-box">
+            <span class="stat-label">PUNTOS DEL NIVEL</span>
+            <span id="level-complete-score" class="stat-val highlight-gold">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">BONUS DE TIEMPO</span>
+            <span id="level-complete-bonus" class="stat-val highlight-green">+0</span>
+          </div>
+        </div>
+
+        <button id="next-level-btn" class="btn-primary btn-gold-action">AVANZAR A <span id="level-complete-next-num">NIVEL 2</span> ➔</button>
+      </div>
+    </div>
+
+    <!-- MODAL DE CAMPAÑA COMPLETADA (LOS 5 NIVELES SUPERADOS) -->
+    <div id="campaign-complete-modal" class="menu-overlay modal-result hidden">
+      <div class="dossier-card card-victory">
+        <div class="dossier-clip"></div>
+        <div class="dossier-stamp stamp-solved">CASO CERRADO</div>
+        <h2 class="menu-title victory-title">¡CAMPAÑA COMPLETADA!</h2>
+        <div class="case-verdict">Has desmantelado la red del Sindicato en las 5 escenas del crimen.</div>
+        
+        <div class="stars-display">★★★★★</div>
+
+        <div class="stats-summary-grid">
+          <div class="stat-box">
+            <span class="stat-label">PUNTUACIÓN TOTAL CAMPAÑA</span>
+            <span id="campaign-total-score" class="stat-val highlight-gold">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">MÁXIMO COMBO LOGRADO</span>
+            <span id="campaign-max-combo" class="stat-val">x5</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">CLICS FALLIDOS TOTALES</span>
+            <span id="campaign-total-misclicks" class="stat-val">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">RANGO OBTENIDO</span>
+            <span class="stat-val highlight-green">MAESTRO DETECTIVE</span>
+          </div>
+        </div>
+
+        <button id="campaign-restart-btn" class="btn-primary btn-gold-action">JUGAR DE NUEVO (NIVEL 1)</button>
+      </div>
+    </div>
+
+    <!-- MODAL DE DERROTA (TIEMPO AGOTADO) -->
+    <div id="defeat-modal" class="menu-overlay modal-result hidden">
+      <div class="dossier-card card-defeat">
+        <div class="dossier-clip"></div>
+        <div class="dossier-stamp stamp-cold">TIEMPO AGOTADO</div>
+        <h2 class="menu-title defeat-title">¡INVESTIGACIÓN FALLIDA!</h2>
+        <p id="defeat-level-title" class="case-verdict">NIVEL 1: DESPACHO DEL DETECTIVE</p>
+        <p class="menu-description">
+          Los cómplices del sindicato borraron los rastros antes de asegurar la escena.
+        </p>
+
+        <div class="stats-summary-grid">
+          <div class="stat-box">
+            <span class="stat-label">EVIDENCIAS RECOGIDAS</span>
+            <span id="defeat-found" class="stat-val highlight-red">0 / 6</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">PUNTOS CONSEGUIDOS</span>
+            <span id="defeat-score" class="stat-val">0</span>
+          </div>
+        </div>
+
+        <button id="defeat-retry-btn" class="btn-primary btn-danger-action">REINTENTAR ESTE NIVEL</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- BARRA DOCK INFERIOR DE EVIDENCIAS A ENCONTRAR -->
+  <section class="evidence-dock">
+    <div class="dock-header">
+      <div class="dock-title-group">
+        <span class="dock-icon">📂</span>
+        <span class="dock-title">CATÁLOGO DE EVIDENCIAS DEL NIVEL</span>
+      </div>
+      <div class="dock-counter-group">
+        <span class="dock-counter-label">INDICIOS ASEGURADOS:</span>
+        <span id="evidence-counter" class="dock-counter">0 / 6</span>
+      </div>
+    </div>
+
+    <div id="evidence-list" class="evidence-cards-container"></div>
+  </section>
+
+  <!-- PANEL / TERMINAL DE REGISTRO INFERIOR -->
+  <footer class="game-footer">
+    <div class="terminal-header">
+      <span class="terminal-title">Terminal de Inspección de Campo // Sistema de Sub-escenas y Capas</span>
+      <span class="terminal-status">● SISTEMA OPERATIVO Y AUDIO ACTIVO</span>
+    </div>
+    <div id="debug-log" class="debug-log"></div>
+  </footer>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
